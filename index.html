@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<title>FlashCards</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#534AB7"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js");</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg0:#fff;--bg1:#f4f4f4;--bg2:#e8e8e8;--fg0:#111;--fg1:#555;--fg2:#999;--brd:rgba(0,0,0,0.13);--brd2:rgba(0,0,0,0.25);--acc:#534AB7;--acc2:#3C3489;--card:#fff}
+.dark{--bg0:#1c1c1c;--bg1:#252525;--bg2:#2f2f2f;--fg0:#f0f0f0;--fg1:#aaa;--fg2:#666;--brd:rgba(255,255,255,0.1);--brd2:rgba(255,255,255,0.22);--card:#242424}
+html,body{height:100%;overflow:hidden;background:var(--bg1);color:var(--fg0);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#app{height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+.screen{display:none;flex-direction:column;flex:1;overflow:hidden}
+.screen.active{display:flex}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:8px;padding:12px 14px 8px;background:var(--bg0);border-bottom:0.5px solid var(--brd);flex-shrink:0}
+.topbar h1{font-size:18px;font-weight:600;color:var(--fg0);flex:1}
+.sub{font-size:12px;color:var(--fg2);margin-top:1px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px 13px;border-radius:8px;border:0.5px solid var(--brd2);background:var(--bg0);color:var(--fg0);font-size:13px;cursor:pointer;transition:background .15s,transform .1s;white-space:nowrap;font-family:inherit}
+.btn:hover{background:var(--bg2)}.btn:active{transform:scale(.97)}
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn-p:hover{background:var(--acc2)}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-icon{padding:6px;border-radius:50%;width:32px;height:32px;border:none;background:transparent;color:var(--fg0);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
+.btn-icon:hover{background:var(--bg2)}
+
+/* NAV */
+.bottomnav{display:flex;background:var(--bg0);border-top:0.5px solid var(--brd);flex-shrink:0}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 12px;cursor:pointer;color:var(--fg2);font-size:10px}
+.nav-item.active{color:var(--acc)}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* LISTS */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.list-wrap{background:var(--bg0);border:0.5px solid var(--brd);border-radius:12px;margin:6px 12px;overflow:hidden}
+.row-item{display:flex;align-items:center;gap:12px;padding:.8rem 1rem;border-bottom:0.5px solid var(--brd);background:var(--bg0);cursor:pointer}
+.row-item:last-child{border-bottom:none}
+.row-item:active{background:var(--bg2)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-due{background:#fef2f2;color:#b91c1c}.badge-ok{background:#f0fdf4;color:#15803d}
+.dark .badge-due{background:#450a0a;color:#fca5a5}.dark .badge-ok{background:#052e16;color:#86efac}
+.section-title{font-size:11px;color:var(--fg2);text-transform:uppercase;letter-spacing:.07em;padding:12px 14px 5px;flex-shrink:0}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 12px;flex-shrink:0}
+.stat-box{background:var(--bg2);border-radius:8px;padding:12px;text-align:center}
+.stat-num{font-size:22px;font-weight:600;color:var(--fg0)}
+.stat-lbl{font-size:11px;color:var(--fg2);margin-top:2px}
+.stat-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 12px}
+
+/* FORM */
+.form-field{margin:0 12px 11px}
+.form-field label{display:block;font-size:12px;color:var(--fg2);margin-bottom:4px}
+.form-field input,.form-field textarea,.form-field select{width:100%;padding:9px 11px;border-radius:8px;border:0.5px solid var(--brd2);background:var(--bg0);color:var(--fg0);font-size:14px;font-family:inherit}
+.form-field textarea{min-height:70px;resize:vertical}
+
+/* PROGRESS */
+.prog-bar{height:4px;background:var(--bg2);border-radius:3px}
+.prog-fill{height:100%;background:var(--acc);border-radius:3px;transition:width .3s}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--fg2);font-size:13px;line-height:1.7}
+
+/* REVIEW */
+.rev-card{background:var(--card);border:0.5px solid var(--brd2);border-radius:16px;margin:0 12px;position:relative;overflow:hidden;cursor:pointer;min-height:220px;display:flex;align-items:center;justify-content:center}
+.rev-card canvas{display:block;width:100%;height:auto;border-radius:16px}
+.flip-hint{text-align:center;font-size:12px;color:var(--fg2);padding:8px 0}
+.btn-ok{background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;padding:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;flex:1;transition:transform .1s}
+.btn-ko{background:#dc2626;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;padding:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;flex:1;transition:transform .1s}
+.btn-ok:active,.btn-ko:active{transform:scale(.95)}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:0.5px solid var(--brd)}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.t-slider{position:absolute;inset:0;background:var(--bg2);border-radius:24px;cursor:pointer;transition:.2s}
+.t-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.2s}
+input:checked+.t-slider{background:var(--acc)}
+input:checked+.t-slider:before{transform:translateX(20px)}
+
+/* ===== CARD EDITOR ===== */
+#editor-screen{background:var(--bg1)}
+.editor-topbar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg0);border-bottom:0.5px solid var(--brd);flex-shrink:0;flex-wrap:wrap}
+.editor-tabs{display:flex;gap:0;flex-shrink:0}
+.etab{padding:6px 14px;font-size:13px;border:0.5px solid var(--brd2);background:var(--bg0);color:var(--fg1);cursor:pointer;font-family:inherit}
+.etab:first-child{border-radius:8px 0 0 8px}.etab:last-child{border-radius:0 8px 8px 0}
+.etab.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.toolbar{display:flex;gap:4px;padding:6px 10px;background:var(--bg0);border-bottom:0.5px solid var(--brd);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.toolbar::-webkit-scrollbar{display:none}
+.tool-btn{display:flex;align-items:center;justify-content:center;min-width:34px;height:34px;border-radius:7px;border:0.5px solid var(--brd);background:var(--bg0);color:var(--fg0);cursor:pointer;font-size:13px;padding:0 8px;gap:4px;white-space:nowrap;font-family:inherit;flex-shrink:0}
+.tool-btn:hover{background:var(--bg2)}.tool-btn.active-tool{background:var(--acc);color:#fff;border-color:var(--acc)}
+.tool-sep{width:1px;background:var(--brd2);margin:4px 2px;flex-shrink:0}
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;padding:12px;overflow:auto;background:var(--bg1)}
+#card-canvas{border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.18);touch-action:none;cursor:crosshair;display:block}
+.sub-toolbar{display:flex;gap:6px;align-items:center;padding:6px 10px;background:var(--bg0);border-bottom:0.5px solid var(--brd);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.sub-toolbar::-webkit-scrollbar{display:none}
+input[type=color]{width:28px;height:28px;border:0.5px solid var(--brd2);border-radius:6px;padding:1px;cursor:pointer;background:none;flex-shrink:0}
+input[type=range]{width:80px;accent-color:var(--acc);flex-shrink:0}
+.layer-panel{position:absolute;right:10px;bottom:10px;background:var(--bg0);border:0.5px solid var(--brd2);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:4px;z-index:10;min-width:90px}
+.layer-item{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;font-size:11px;color:var(--fg0);cursor:pointer;user-select:none}
+.layer-item.selected{background:var(--acc);color:#fff}
+.layer-item:hover:not(.selected){background:var(--bg2)}
+
+/* CROPPER */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+.crop-wrap{position:relative;width:300px;height:260px;overflow:hidden;border-radius:10px;background:#000;touch-action:none}
+#cropCanvas{display:block;width:300px;height:260px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div class="screen active" id="s-home">
+  <div class="topbar"><div style="flex:1"><h1>Mes matières</h1><div class="sub" id="home-sub"></div></div>
+    <button class="btn btn-sm btn-p" onclick="show('s-new-subject')">＋ Matière</button></div>
+  <div class="scroll">
+    <div class="stat-grid" id="home-stats"></div>
+    <div class="section-title">Matières</div>
+    <div class="list-wrap" id="subject-list"></div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- SUBJECT -->
+<div class="screen" id="s-subject">
+  <div class="topbar">
+    <button class="btn-icon" onclick="show('s-home')">←</button>
+    <div style="flex:1"><h1 id="subj-title"></h1><div class="sub" id="subj-sub"></div></div>
+    <button class="btn-icon" onclick="show('s-new-lesson')" style="font-size:22px">＋</button>
+  </div>
+  <div class="scroll">
+    <div class="section-title">Leçons</div>
+    <div class="list-wrap" id="lesson-list"></div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div class="screen" id="s-lesson">
+  <div class="topbar">
+    <button class="btn-icon" onclick="show('s-subject');renderSubject()">←</button>
+    <div style="flex:1"><h1 id="lesson-title"></h1><div class="sub" id="lesson-sub"></div></div>
+    <button class="btn btn-sm btn-p" onclick="prepNewCard()">＋ Carte</button>
+  </div>
+  <div style="padding:8px 12px 6px;flex-shrink:0">
+    <button class="btn btn-p" style="width:100%" onclick="startReview()">▶ Réviser</button>
+  </div>
+  <div class="scroll">
+    <div class="section-title">Cartes</div>
+    <div id="card-list"></div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div class="screen" id="s-review">
+  <div class="topbar">
+    <button class="btn-icon" onclick="endReview()">✕</button>
+    <div style="flex:1;text-align:center">
+      <div style="font-size:14px;font-weight:600;color:var(--fg0)" id="rev-label"></div>
+      <div style="font-size:11px;color:var(--fg2)" id="rev-remaining"></div>
+    </div>
+    <div style="width:32px"></div>
+  </div>
+  <div class="prog-bar" style="margin:6px 12px;flex-shrink:0"><div class="prog-fill" id="rev-bar" style="width:0%"></div></div>
+  <div class="scroll" style="display:flex;flex-direction:column">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:12px">
+      <div style="width:100%">
+        <div class="rev-card" id="rev-card" onclick="flipCard()">
+          <canvas id="rev-canvas"></canvas>
+        </div>
+        <div class="flip-hint" id="flip-hint">Appuie pour voir la réponse</div>
+      </div>
+    </div>
+    <div id="rating-wrap" style="display:none;padding:0 12px 16px">
+      <div style="display:flex;gap:10px">
+        <button class="btn-ko" onclick="rate(0)">✕ Raté</button>
+        <button class="btn-ok" onclick="rate(1)">✓ Réussi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DONE -->
+<div class="screen" id="s-done">
+  <div class="scroll" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px 20px">
+    <div style="font-size:52px">🎓</div>
+    <div style="font-size:20px;font-weight:600;color:var(--fg0)">Session terminée !</div>
+    <div class="stat-grid-3" style="width:100%;max-width:320px;margin:0">
+      <div class="stat-box"><div class="stat-num" style="color:#16a34a" id="done-ok">0</div><div class="stat-lbl">Réussies</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:#dc2626" id="done-ko">0</div><div class="stat-lbl">Ratées</div></div>
+      <div class="stat-box"><div class="stat-num" id="done-pct">0%</div><div class="stat-lbl">Réussite</div></div>
+    </div>
+    <div id="done-msg" style="font-size:14px;color:var(--fg1);text-align:center;line-height:1.6"></div>
+    <button class="btn btn-p" onclick="show('s-lesson');renderLesson()">Retour à la leçon</button>
+  </div>
+</div>
+
+<!-- NEW SUBJECT -->
+<div class="screen" id="s-new-subject">
+  <div class="topbar"><button class="btn-icon" onclick="show('s-home')">✕</button><h1 style="flex:1">Nouvelle matière</h1>
+    <button class="btn btn-sm btn-p" onclick="saveSubject()">Créer</button></div>
+  <div class="scroll" style="padding-top:10px">
+    <div class="form-field"><label>Nom</label><input id="ns-name" placeholder="ex: Mathématiques"/></div>
+    <div class="form-field"><label>Emoji</label><input id="ns-emoji" placeholder="📐" maxlength="2"/></div>
+    <div class="form-field"><label>Couleur</label>
+      <select id="ns-color">
+        <option value="#EEEDFE,#534AB7">Violet</option><option value="#E1F5EE,#0F6E56">Vert</option>
+        <option value="#FAECE7,#993C1D">Corail</option><option value="#E6F1FB,#185FA5">Bleu</option>
+        <option value="#FAEEDA,#854F0B">Ambre</option><option value="#FBEAF0,#993556">Rose</option>
+      </select></div>
+  </div>
+</div>
+
+<!-- NEW LESSON -->
+<div class="screen" id="s-new-lesson">
+  <div class="topbar"><button class="btn-icon" onclick="show('s-subject')">✕</button><h1 style="flex:1">Nouvelle leçon</h1>
+    <button class="btn btn-sm btn-p" onclick="saveLesson()">Créer</button></div>
+  <div class="scroll" style="padding-top:10px">
+    <div class="form-field"><label>Titre</label><input id="nl-name" placeholder="ex: Les fractions"/></div>
+  </div>
+</div>
+
+<!-- CARD EDITOR -->
+<div class="screen" id="editor-screen">
+  <div class="editor-topbar">
+    <button class="btn-icon" onclick="cancelEditor()">✕</button>
+    <div class="editor-tabs">
+      <div class="etab active" id="tab-q" onclick="switchSide('q')">Recto</div>
+      <div class="etab" id="tab-a" onclick="switchSide('a')">Verso</div>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn btn-sm btn-p" onclick="saveCardFromEditor()">Enregistrer</button>
+  </div>
+  <!-- TOOL MODE TOOLBAR -->
+  <div class="toolbar" id="toolbar-main">
+    <button class="tool-btn active-tool" id="tool-select" onclick="setTool('select')">↖ Sélect.</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="tool-text" onclick="addTextElement()">T Texte</button>
+    <button class="tool-btn" id="tool-image" onclick="triggerImgUpload()">🖼 Image</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="tool-draw" onclick="setTool('draw')">✏ Dessin</button>
+    <button class="tool-btn" id="tool-line" onclick="setTool('line')">╱ Ligne</button>
+    <button class="tool-btn" id="tool-arrow" onclick="setTool('arrow')">→ Flèche</button>
+    <button class="tool-btn" id="tool-rect" onclick="setTool('rect')">▭ Rect.</button>
+    <button class="tool-btn" id="tool-circle" onclick="setTool('circle')">○ Cercle</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="tool-erase" onclick="setTool('erase')">⌫ Gomme</button>
+    <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="handleImgUpload(this)"/>
+  </div>
+  <!-- SUB TOOLBAR (context-sensitive) -->
+  <div class="sub-toolbar" id="sub-toolbar">
+    <span style="font-size:11px;color:var(--fg2)">Couleur:</span>
+    <input type="color" id="el-color" value="#111111" onchange="applyColor(this.value)"/>
+    <span style="font-size:11px;color:var(--fg2)">Taille:</span>
+    <input type="range" id="el-size" min="2" max="60" value="16" oninput="applySize(this.value)"/>
+    <span id="el-size-val" style="font-size:12px;min-width:24px">16</span>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="align-l" onclick="applyAlign('left')" title="Gauche">⬛L</button>
+    <button class="tool-btn" id="align-c" onclick="applyAlign('center')" title="Centré">⬛C</button>
+    <button class="tool-btn" id="align-r" onclick="applyAlign('right')" title="Droite">⬛R</button>
+    <button class="tool-btn" id="align-j" onclick="applyAlign('justify')" title="Justifié">⬛J</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="layer-up-btn" onclick="moveLayer(1)" title="Avant">↑ Avant</button>
+    <button class="tool-btn" id="layer-dn-btn" onclick="moveLayer(-1)" title="Arrière">↓ Arrière</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="deleteSelected()" style="color:#dc2626">🗑</button>
+  </div>
+  <div class="canvas-area">
+    <canvas id="card-canvas" width="340" height="240"></canvas>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="screen" id="s-stats">
+  <div class="topbar"><h1>Statistiques</h1></div>
+  <div class="scroll" id="stats-content"></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="screen" id="s-settings">
+  <div class="topbar"><h1>Paramètres</h1></div>
+  <div class="scroll">
+    <div class="list-wrap" style="margin-top:10px">
+      <div class="toggle-row">
+        <div><div style="font-size:14px;font-weight:500;color:var(--fg0)">Mode sombre</div>
+          <div style="font-size:12px;color:var(--fg2)">Fond sombre pour les yeux</div></div>
+        <label class="toggle"><input type="checkbox" id="dark-toggle" onchange="toggleDark(this.checked)"><span class="t-slider"></span></label>
+      </div>
+    </div>
+    <div style="height:16px"></div>
+  </div>
+</div>
+
+<nav class="bottomnav">
+  <div class="nav-item active" id="nav-home" onclick="navTo('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>Accueil</div>
+  <div class="nav-item" id="nav-stats" onclick="navTo('stats')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>Stats</div>
+  <div class="nav-item" id="nav-settings" onclick="navTo('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Paramètres</div>
+</nav>
+
+<!-- CROPPER OVERLAY -->
+<div class="overlay" id="crop-overlay" style="display:none">
+  <div style="color:#fff;font-size:15px;font-weight:600">Rogner la photo</div>
+  <div class="crop-wrap" id="crop-wrap"><canvas id="cropCanvas" width="300" height="260"></canvas></div>
+  <div style="color:rgba(255,255,255,0.55);font-size:12px">Glisse · Pince pour zoomer</div>
+  <div style="display:flex;gap:10px">
+    <button onclick="cancelCrop()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.18);color:#fff;cursor:pointer;font-size:14px">Annuler</button>
+    <button onclick="confirmCrop()" style="padding:10px 20px;border-radius:8px;border:none;background:#16a34a;color:#fff;cursor:pointer;font-size:14px;font-weight:600">Rogner ✓</button>
+  </div>
+</div>
+
+<!-- TEXT INPUT OVERLAY -->
+<div class="overlay" id="text-overlay" style="display:none;z-index:998">
+  <div style="color:#fff;font-size:15px;font-weight:600">Ajouter du texte</div>
+  <textarea id="text-input" rows="4" style="width:280px;padding:10px;border-radius:8px;border:none;font-size:16px;font-family:inherit;resize:none" placeholder="Tape ton texte ici..."></textarea>
+  <div style="display:flex;gap:10px">
+    <button onclick="cancelTextInput()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.18);color:#fff;cursor:pointer;font-size:14px">Annuler</button>
+    <button onclick="confirmTextInput()" style="padding:10px 20px;border-radius:8px;border:none;background:var(--acc);color:#fff;cursor:pointer;font-size:14px;font-weight:600">Ajouter</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+<script>
+// ===================== STATE =====================
+let DB={subjects:[]};
+let cur={subject:null,lesson:null};
+let rev={queue:[],idx:0,ok:0,ko:0,flipped:false};
+
+// Editor state
+let editorSide='q'; // 'q' or 'a'
+let editingCardId=null;
+let editorData={q:[],a:[]}; // layers per side
+let selectedIdx=-1;
+let currentTool='select';
+let drawColor='#111111';
+let drawSize=16;
+let isDrawing=false;
+let drawStart={x:0,y:0};
+let currentStroke=null;
+let cropTarget=null; // {side}
+
+const CW=340,CH=240;
+
+// ===================== DB =====================
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function isDue(c){return Date.now()>=(c.due||0)}
+function totalCards(sj){return sj.lessons.reduce((s,l)=>s+l.cards.length,0)}
+function dueCards(sj){return sj.lessons.reduce((s,l)=>s+l.cards.filter(isDue).length,0)}
+function lessonDue(l){return l.cards.filter(isDue).length}
+function lessonMastery(l){if(!l.cards.length)return 0;return Math.round(l.cards.filter(c=>c.reps>=2).length/l.cards.length*100)}
+
+function mkCard(){return{id:uid(),layers:{q:[],a:[]},interval:1,ef:2.5,reps:0,due:Date.now(),reviews:0,correct:0}}
+
+function loadDB(){
+  try{const d=localStorage.getItem('fc4');if(d)DB=JSON.parse(d);}catch(e){}
+  if(!DB.subjects)DB.subjects=[];
+  if(!DB.subjects.length)seedDemo();
+  const dark=localStorage.getItem('fc4_dark')==='1';
+  if(dark){document.body.classList.add('dark');document.getElementById('dark-toggle').checked=true;}
+  renderHome();
+}
+
+function saveDB(){try{localStorage.setItem('fc4',JSON.stringify(DB));}catch(e){alert('Stockage plein – certaines images sont trop lourdes.');}}
+
+function seedDemo(){
+  const c1=mkCard();
+  c1.layers.q=[{type:'text',text:'En quelle année a commencé\nla Révolution française ?',x:170,y:120,fontSize:20,color:'#222222',align:'center',zIndex:0}];
+  c1.layers.a=[{type:'text',text:'1789',x:170,y:120,fontSize:48,color:'#534AB7',align:'center',zIndex:0}];
+  const c2=mkCard();
+  c2.layers.q=[{type:'text',text:"Qu'est-ce que la\nDéclaration des droits de l'homme ?",x:170,y:120,fontSize:16,color:'#222222',align:'center',zIndex:0}];
+  c2.layers.a=[{type:'text',text:'Un texte fondamental de 1789\ngarantissant les droits naturels.',x:170,y:120,fontSize:15,color:'#333',align:'center',zIndex:0}];
+  DB.subjects=[{id:uid(),name:'Histoire-Géo',emoji:'🌍',color:'#E6F1FB,#185FA5',
+    lessons:[{id:uid(),name:'La Révolution française',cards:[c1,c2]}]}];
+  saveDB();
+}
+
+// ===================== NAVIGATION =====================
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+function navTo(tab){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+tab).classList.add('active');
+  if(tab==='home'){renderHome();show('s-home');}
+  else if(tab==='stats'){renderStats();show('s-stats');}
+  else if(tab==='settings'){show('s-settings');}
+}
+
+function toggleDark(on){document.body.classList.toggle('dark',on);localStorage.setItem('fc4_dark',on?'1':'0');}
+
+// ===================== RENDER HOME =====================
+function renderHome(){
+  const total=DB.subjects.reduce((s,sj)=>s+totalCards(sj),0);
+  const due=DB.subjects.reduce((s,sj)=>s+dueCards(sj),0);
+  document.getElementById('home-sub').textContent=DB.subjects.length+' matière'+(DB.subjects.length!==1?'s':'');
+  document.getElementById('home-stats').innerHTML=
+    `<div class="stat-box"><div class="stat-num">${total}</div><div class="stat-lbl">Cartes total</div></div>`+
+    `<div class="stat-box"><div class="stat-num" style="color:#dc2626">${due}</div><div class="stat-lbl">À réviser</div></div>`;
+  const list=document.getElementById('subject-list');
+  if(!DB.subjects.length){list.innerHTML='<div class="empty">Aucune matière.<br>Crée-en une !</div>';return;}
+  list.innerHTML=DB.subjects.map(sj=>{
+    const cols=sj.color.split(','),d=dueCards(sj),t=totalCards(sj);
+    const badge=d>0?`<span class="badge badge-due">${d} à réviser</span>`:`<span class="badge badge-ok">À jour</span>`;
+    return`<div class="row-item" onclick="openSubject('${sj.id}')">
+      <div style="width:38px;height:38px;border-radius:8px;background:${cols[0]};color:${cols[1]};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${sj.emoji||'📚'}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:14px">${sj.name}</div>
+      <div style="font-size:12px;color:var(--fg2);margin-top:2px">${t} carte${t!==1?'s':''} · ${badge}</div></div>
+      <span style="color:var(--fg2);font-size:20px">›</span></div>`;
+  }).join('');
+}
+
+function openSubject(id){cur.subject=DB.subjects.find(s=>s.id===id);renderSubject();show('s-subject');}
+
+function renderSubject(){
+  const sj=cur.subject;
+  document.getElementById('subj-title').textContent=(sj.emoji||'')+' '+sj.name;
+  document.getElementById('subj-sub').textContent=sj.lessons.length+' leçon'+(sj.lessons.length!==1?'s':'')+' · '+totalCards(sj)+' cartes';
+  const list=document.getElementById('lesson-list');
+  if(!sj.lessons.length){list.innerHTML='<div class="empty">Aucune leçon. Appuie sur ＋</div>';return;}
+  list.innerHTML=sj.lessons.map(l=>{
+    const d=lessonDue(l),t=l.cards.length,m=lessonMastery(l);
+    const badge=d>0?`<span class="badge badge-due">${d} à réviser</span>`:`<span class="badge badge-ok">À jour</span>`;
+    return`<div class="row-item" onclick="openLesson('${l.id}')">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${l.name}</div>
+        <div style="font-size:12px;color:var(--fg2);margin-top:2px">${t} carte${t!==1?'s':''} · ${badge}</div>
+        <div class="prog-bar" style="margin-top:5px"><div class="prog-fill" style="width:${m}%"></div></div>
+      </div><span style="color:var(--fg2);font-size:20px;margin-left:8px">›</span></div>`;
+  }).join('');
+}
+
+function openLesson(id){cur.lesson=cur.subject.lessons.find(l=>l.id===id);renderLesson();show('s-lesson');}
+
+function renderLesson(){
+  const l=cur.lesson;
+  document.getElementById('lesson-title').textContent=l.name;
+  document.getElementById('lesson-sub').textContent=l.cards.length+' carte'+(l.cards.length!==1?'s':'')+' · '+lessonDue(l)+' à réviser';
+  const list=document.getElementById('card-list');
+  if(!l.cards.length){list.innerHTML='<div class="empty">Aucune carte.<br>Appuie sur ＋ Carte pour en ajouter.</div>';return;}
+  list.innerHTML=l.cards.map((c,i)=>{
+    const due=isDue(c);
+    const pct=c.reviews>0?Math.round(c.correct/c.reviews*100):0;
+    return`<div style="margin:6px 12px;background:var(--bg0);border:0.5px solid var(--brd);border-radius:12px;overflow:hidden;cursor:pointer" onclick="editCard(${i})">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;gap:8px">
+        <div style="flex:1">
+          <canvas id="thumb-${c.id}" width="120" height="80" style="border-radius:6px;border:0.5px solid var(--brd);display:block;margin-bottom:5px"></canvas>
+          ${c.reviews>0?`<div style="font-size:11px;color:var(--fg2)">${c.reviews} rév. · ${pct}% réussite</div>`:'<div style="font-size:11px;color:var(--fg2)">Pas encore révisée</div>'}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          ${due?'<span class="badge badge-due">dû</span>':'<span class="badge badge-ok">ok</span>'}
+          <button onclick="event.stopPropagation();deleteCard(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:18px;padding:4px">🗑</button>
+        </div>
+      </div></div>`;
+  }).join('');
+  // render thumbnails after DOM update
+  setTimeout(()=>l.cards.forEach(c=>renderCardToCanvas(c,'q',document.getElementById('thumb-'+c.id),120,80)),50);
+}
+
+// ===================== SAVE SUBJECT / LESSON =====================
+function saveSubject(){
+  const name=document.getElementById('ns-name').value.trim();
+  if(!name){alert('Donne un nom !');return;}
+  DB.subjects.push({id:uid(),name,emoji:document.getElementById('ns-emoji').value||'📚',color:document.getElementById('ns-color').value,lessons:[]});
+  saveDB();document.getElementById('ns-name').value='';document.getElementById('ns-emoji').value='';renderHome();show('s-home');
+}
+function saveLesson(){
+  const name=document.getElementById('nl-name').value.trim();
+  if(!name){alert('Donne un titre !');return;}
+  cur.subject.lessons.push({id:uid(),name,cards:[]});
+  saveDB();document.getElementById('nl-name').value='';renderSubject();show('s-subject');
+}
+function deleteCard(i){if(!confirm('Supprimer cette carte ?'))return;cur.lesson.cards.splice(i,1);saveDB();renderLesson();}
+
+// ===================== CARD EDITOR =====================
+function prepNewCard(){
+  editingCardId=null;
+  editorData={q:[],a:[]};
+  editorSide='q';
+  selectedIdx=-1;
+  currentTool='select';
+  setTool('select');
+  switchSide('q');
+  show('editor-screen');
+  setTimeout(()=>renderEditor(),50);
+}
+
+function editCard(i){
+  const c=cur.lesson.cards[i];
+  editingCardId=c.id;
+  // deep clone layers
+  editorData={q:JSON.parse(JSON.stringify(c.layers.q||[])),a:JSON.parse(JSON.stringify(c.layers.a||[]))};
+  editorSide='q';selectedIdx=-1;currentTool='select';
+  setTool('select');switchSide('q');
+  show('editor-screen');
+  // reload image layers
+  const loadImgs=layers=>Promise.all(layers.filter(l=>l.type==='image').map(l=>new Promise(res=>{
+    if(l._img)return res();
+    const img=new Image();img.onload=()=>{l._img=img;res();};img.onerror=res;img.src=l.src;
+  })));
+  Promise.all([loadImgs(editorData.q),loadImgs(editorData.a)]).then(()=>{setTimeout(()=>renderEditor(),50);});
+}
+
+function cancelEditor(){show('s-lesson');}
+
+function saveCardFromEditor(){
+  // strip non-serializable
+  const strip=layers=>layers.map(l=>{const c={...l};delete c._img;return c;});
+  if(editingCardId){
+    const c=cur.lesson.cards.find(x=>x.id===editingCardId);
+    if(c){c.layers={q:strip(editorData.q),a:strip(editorData.a)};}
+  }else{
+    const c=mkCard();
+    c.layers={q:strip(editorData.q),a:strip(editorData.a)};
+    cur.lesson.cards.push(c);
+  }
+  saveDB();renderLesson();show('s-lesson');
+}
+
+function switchSide(side){
+  editorSide=side;selectedIdx=-1;
+  document.getElementById('tab-q').classList.toggle('active',side==='q');
+  document.getElementById('tab-a').classList.toggle('active',side==='a');
+  renderEditor();
+}
+
+function currentLayers(){return editorData[editorSide];}
+
+function setTool(t){
+  currentTool=t;
+  ['select','draw','line','arrow','rect','circle','erase'].forEach(id=>{
+    const el=document.getElementById('tool-'+id);if(el)el.classList.toggle('active-tool',id===t);
+  });
+}
+
+// ====== EDITOR CANVAS RENDERING ======
+function getCanvas(){return document.getElementById('card-canvas');}
+function getCtx(){return getCanvas().getContext('2d');}
+
+function renderEditor(){
+  const canvas=getCanvas();
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const dark=document.body.classList.contains('dark');
+  ctx.clearRect(0,0,CW,CH);
+  ctx.fillStyle=dark?'#242424':'#ffffff';
+  ctx.fillRect(0,0,CW,CH);
+  const layers=[...currentLayers()].sort((a,b)=>(a.zIndex||0)-(b.zIndex||0));
+  layers.forEach((l,i)=>drawLayer(ctx,l,i===selectedIdx));
+  // draw selection handle
+  if(selectedIdx>=0){
+    const l=currentLayers()[selectedIdx];
+    if(l&&l.type!=='draw_stroke'){
+      const bounds=getLayerBounds(l);
+      ctx.strokeStyle='#534AB7';ctx.lineWidth=2;ctx.setLineDash([5,3]);
+      ctx.strokeRect(bounds.x-4,bounds.y-4,bounds.w+8,bounds.h+8);
+      ctx.setLineDash([]);
+      // handle
+      ctx.fillStyle='#534AB7';ctx.beginPath();ctx.arc(bounds.x+bounds.w+4,bounds.y-4,6,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+function drawLayer(ctx,l,selected){
+  ctx.save();
+  if(l.type==='text'){
+    ctx.font=`${l.fontSize||16}px -apple-system,BlinkMacSystemFont,sans-serif`;
+    ctx.fillStyle=l.color||'#111';
+    ctx.textAlign=l.align==='justify'?'left':(l.align||'left');
+    ctx.textBaseline='middle';
+    const lines=(l.text||'').split('\n');
+    const lineH=(l.fontSize||16)*1.4;
+    const totalH=lines.length*lineH;
+    const startY=l.y-totalH/2+lineH/2;
+    const maxW=CW-20;
+    lines.forEach((line,i)=>{
+      let x=l.x;
+      if(l.align==='center')x=l.x;
+      else if(l.align==='right')x=l.x;
+      else x=l.x;
+      if(l.align==='justify'&&lines.length>1&&i<lines.length-1){
+        drawJustified(ctx,line,l.x-(maxW/2),startY+i*lineH,maxW);
+      }else{
+        ctx.fillText(line,x,startY+i*lineH,maxW);
+      }
+    });
+  }else if(l.type==='image'&&l._img){
+    ctx.drawImage(l._img,l.x-l.w/2,l.y-l.h/2,l.w,l.h);
+  }else if(l.type==='image'&&!l._img){
+    const img=new Image();img.onload=()=>{l._img=img;renderEditor();};img.src=l.src;
+  }else if(l.type==='draw_stroke'&&l.points&&l.points.length>1){
+    ctx.strokeStyle=l.color||'#111';ctx.lineWidth=l.size||3;
+    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(l.points[0].x,l.points[0].y);
+    l.points.forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+  }else if(l.type==='line'||l.type==='arrow'){
+    ctx.strokeStyle=l.color||'#111';ctx.lineWidth=l.size||2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();
+    if(l.type==='arrow'){
+      const angle=Math.atan2(l.y2-l.y1,l.x2-l.x1);
+      const al=12,aw=0.4;
+      ctx.beginPath();ctx.moveTo(l.x2,l.y2);
+      ctx.lineTo(l.x2-al*Math.cos(angle-aw),l.y2-al*Math.sin(angle-aw));
+      ctx.lineTo(l.x2-al*Math.cos(angle+aw),l.y2-al*Math.sin(angle+aw));
+      ctx.closePath();ctx.fillStyle=l.color||'#111';ctx.fill();
+    }
+  }else if(l.type==='rect'){
+    ctx.strokeStyle=l.color||'#111';ctx.lineWidth=l.size||2;
+    ctx.strokeRect(l.x-l.w/2,l.y-l.h/2,l.w,l.h);
+  }else if(l.type==='circle'){
+    ctx.strokeStyle=l.color||'#111';ctx.lineWidth=l.size||2;
+    ctx.beginPath();ctx.ellipse(l.x,l.y,l.w/2,l.h/2,0,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawJustified(ctx,text,x,y,maxW){
+  const words=text.split(' ');if(words.length<=1){ctx.fillText(text,x+maxW/2,y);return;}
+  const totalW=words.reduce((s,w)=>s+ctx.measureText(w).width,0);
+  const gap=(maxW-totalW)/(words.length-1);
+  let cx=x;
+  words.forEach((w,i)=>{ctx.fillText(w,cx,y);cx+=ctx.measureText(w).width+(i<words.length-1?gap:0);});
+}
+
+function getLayerBounds(l){
+  if(l.type==='text'){
+    const canvas=getCanvas();const ctx=canvas.getContext('2d');
+    ctx.font=`${l.fontSize||16}px -apple-system,sans-serif`;
+    const lines=(l.text||'').split('\n');
+    const maxW=lines.reduce((m,ln)=>Math.max(m,ctx.measureText(ln).width),0);
+    const h=lines.length*(l.fontSize||16)*1.4;
+    let x=l.x;
+    if(l.align==='center')x=l.x-maxW/2;
+    else if(l.align==='right')x=l.x-maxW;
+    return{x,y:l.y-h/2,w:maxW,h};
+  }
+  if(l.type==='image')return{x:l.x-l.w/2,y:l.y-l.h/2,w:l.w,h:l.h};
+  if(l.type==='rect'||l.type==='circle')return{x:l.x-l.w/2,y:l.y-l.h/2,w:l.w,h:l.h};
+  if(l.type==='line'||l.type==='arrow')return{x:Math.min(l.x1,l.x2),y:Math.min(l.y1,l.y2),w:Math.abs(l.x2-l.x1),h:Math.abs(l.y2-l.y1)};
+  return{x:l.x||0,y:l.y||0,w:20,h:20};
+}
+
+function hitTest(layers,px,py){
+  for(let i=layers.length-1;i>=0;i--){
+    const l=layers[i];
+    if(l.type==='draw_stroke')continue;
+    const b=getLayerBounds(l);
+    if(px>=b.x-8&&px<=b.x+b.w+8&&py>=b.y-8&&py<=b.y+b.h+8)return i;
+  }
+  return -1;
+}
+
+// ====== EDITOR EVENTS ======
+function getCanvasPos(e,canvas){
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=CW/rect.width,scaleY=CH/rect.height;
+  const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-rect.left)*scaleX,y:(src.clientY-rect.top)*scaleY};
+}
+
+let dragOffset={x:0,y:0};
+let shapeStart={x:0,y:0};
+let tempShapeIdx=-1;
+
+function editorPointerDown(e){
+  e.preventDefault();
+  const canvas=getCanvas();
+  const {x,y}=getCanvasPos(e,canvas);
+  if(currentTool==='select'){
+    const idx=hitTest(currentLayers(),x,y);
+    selectedIdx=idx;
+    if(idx>=0){const l=currentLayers()[idx];dragOffset={x:x-(l.x||0),y:y-(l.y||0)};}
+    updateSubToolbar();
+    renderEditor();
+  }else if(currentTool==='draw'||currentTool==='erase'){
+    isDrawing=true;
+    currentStroke={type:'draw_stroke',points:[{x,y}],color:currentTool==='erase'?'#ffffff':drawColor,size:currentTool==='erase'?drawSize*2:drawSize,zIndex:currentLayers().length};
+    // for erase use bg color
+    if(currentTool==='erase'){
+      const dark=document.body.classList.contains('dark');
+      currentStroke.color=dark?'#242424':'#ffffff';
+    }
+    currentLayers().push(currentStroke);
+    tempShapeIdx=currentLayers().length-1;
+  }else if(['line','arrow','rect','circle'].includes(currentTool)){
+    isDrawing=true;shapeStart={x,y};
+    const l={type:currentTool,color:drawColor,size:drawSize>20?3:Math.max(1,Math.round(drawSize/6)),zIndex:currentLayers().length};
+    if(currentTool==='line'||currentTool==='arrow'){l.x1=x;l.y1=y;l.x2=x;l.y2=y;}
+    else{l.x=x;l.y=y;l.w=1;l.h=1;}
+    currentLayers().push(l);tempShapeIdx=currentLayers().length-1;
+  }
+  renderEditor();
+}
+
+function editorPointerMove(e){
+  e.preventDefault();
+  if(!isDrawing&&selectedIdx<0)return;
+  const canvas=getCanvas();
+  const {x,y}=getCanvasPos(e,canvas);
+  if(currentTool==='select'&&selectedIdx>=0&&(e.buttons||e.touches)){
+    const l=currentLayers()[selectedIdx];
+    if(l.type==='line'||l.type==='arrow'){const dx=x-dragOffset.x-(l.x1||0),dy=y-dragOffset.y-(l.y1||0);l.x1+=dx;l.y1+=dy;l.x2+=dx;l.y2+=dy;dragOffset={x:x-(l.x1||0),y:y-(l.y1||0)};}
+    else{l.x=x-dragOffset.x;l.y=y-dragOffset.y;}
+    renderEditor();
+  }else if(currentTool==='draw'||currentTool==='erase'){
+    if(!isDrawing||tempShapeIdx<0)return;
+    currentLayers()[tempShapeIdx].points.push({x,y});
+    renderEditor();
+  }else if(['line','arrow'].includes(currentTool)){
+    if(!isDrawing||tempShapeIdx<0)return;
+    currentLayers()[tempShapeIdx].x2=x;currentLayers()[tempShapeIdx].y2=y;
+    renderEditor();
+  }else if(['rect','circle'].includes(currentTool)){
+    if(!isDrawing||tempShapeIdx<0)return;
+    const l=currentLayers()[tempShapeIdx];
+    l.x=(shapeStart.x+x)/2;l.y=(shapeStart.y+y)/2;
+    l.w=Math.abs(x-shapeStart.x);l.h=Math.abs(y-shapeStart.y);
+    renderEditor();
+  }
+}
+
+function editorPointerUp(e){
+  isDrawing=false;tempShapeIdx=-1;
+}
+
+function setupEditorCanvas(){
+  const canvas=getCanvas();
+  canvas.addEventListener('mousedown',editorPointerDown);
+  canvas.addEventListener('mousemove',editorPointerMove);
+  canvas.addEventListener('mouseup',editorPointerUp);
+  canvas.addEventListener('touchstart',editorPointerDown,{passive:false});
+  canvas.addEventListener('touchmove',editorPointerMove,{passive:false});
+  canvas.addEventListener('touchend',editorPointerUp);
+}
+
+// ====== TEXT ======
+function addTextElement(){
+  document.getElementById('text-input').value='';
+  document.getElementById('text-overlay').style.display='flex';
+}
+function cancelTextInput(){document.getElementById('text-overlay').style.display='none';}
+function confirmTextInput(){
+  const txt=document.getElementById('text-input').value.trim();
+  if(!txt){cancelTextInput();return;}
+  currentLayers().push({type:'text',text:txt,x:CW/2,y:CH/2,fontSize:drawSize||16,color:drawColor||'#111111',align:'center',zIndex:currentLayers().length});
+  selectedIdx=currentLayers().length-1;
+  document.getElementById('text-overlay').style.display='none';
+  setTool('select');renderEditor();updateSubToolbar();
+}
+
+// ====== IMAGE UPLOAD ======
+function triggerImgUpload(){document.getElementById('img-upload').click();}
+function handleImgUpload(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>openCropper(e.target.result,'editor');
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+// ====== PROPERTIES ======
+function updateSubToolbar(){
+  if(selectedIdx<0||selectedIdx>=currentLayers().length)return;
+  const l=currentLayers()[selectedIdx];
+  if(l.color)document.getElementById('el-color').value=rgbToHex(l.color);
+  if(l.fontSize){document.getElementById('el-size').value=l.fontSize;document.getElementById('el-size-val').textContent=l.fontSize;}
+  else if(l.size){document.getElementById('el-size').value=l.size;document.getElementById('el-size-val').textContent=l.size;}
+}
+function rgbToHex(c){if(c&&c.startsWith('#'))return c;return c||'#111111';}
+
+function applyColor(val){
+  drawColor=val;
+  if(selectedIdx<0)return;
+  const l=currentLayers()[selectedIdx];
+  l.color=val;renderEditor();
+}
+function applySize(val){
+  val=parseInt(val);drawSize=val;
+  document.getElementById('el-size-val').textContent=val;
+  if(selectedIdx<0)return;
+  const l=currentLayers()[selectedIdx];
+  if(l.type==='text')l.fontSize=val;
+  else l.size=val;
+  renderEditor();
+}
+function applyAlign(align){
+  if(selectedIdx<0)return;
+  const l=currentLayers()[selectedIdx];
+  if(l.type==='text'){l.align=align;renderEditor();}
+}
+function moveLayer(dir){
+  if(selectedIdx<0)return;
+  const layers=currentLayers();
+  const newIdx=Math.max(0,Math.min(layers.length-1,selectedIdx+dir));
+  if(newIdx===selectedIdx)return;
+  const item=layers.splice(selectedIdx,1)[0];
+  layers.splice(newIdx,0,item);
+  // update zIndex
+  layers.forEach((l,i)=>l.zIndex=i);
+  selectedIdx=newIdx;renderEditor();
+}
+function deleteSelected(){
+  if(selectedIdx<0)return;
+  currentLayers().splice(selectedIdx,1);
+  selectedIdx=-1;renderEditor();
+}
+
+// ====== CROPPER ======
+let cropState={img:null,side:null,x:0,y:0,scale:1,dragging:false,lastX:0,lastY:0,lastDist:0};
+function openCropper(src,side){
+  cropState.side=side;cropState.scale=1;cropState.x=0;cropState.y=0;
+  const img=new Image();
+  img.onload=()=>{
+    cropState.img=img;
+    const cw=300,ch=260;
+    const s=Math.min(cw/img.width,ch/img.height);
+    cropState.scale=s;cropState.x=(cw-img.width*s)/2;cropState.y=(ch-img.height*s)/2;
+    document.getElementById('crop-overlay').style.display='flex';
+    drawCrop();setupCropEvents();
+  };img.src=src;
+}
+function drawCrop(){
+  const canvas=document.getElementById('cropCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,300,260);ctx.fillStyle='#111';ctx.fillRect(0,0,300,260);
+  const img=cropState.img,w=img.width*cropState.scale,h=img.height*cropState.scale;
+  ctx.drawImage(img,cropState.x,cropState.y,w,h);
+  ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
+  for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(100*i,0);ctx.lineTo(100*i,260);ctx.stroke();ctx.beginPath();ctx.moveTo(0,86.7*i);ctx.lineTo(300,86.7*i);ctx.stroke();}
+  ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=2;ctx.strokeRect(1,1,298,258);
+}
+function setupCropEvents(){
+  const wrap=document.getElementById('crop-wrap');
+  wrap.onmousedown=e=>{cropState.dragging=true;cropState.lastX=e.clientX;cropState.lastY=e.clientY;};
+  window.onmousemove=e=>{if(!cropState.dragging)return;cropState.x+=e.clientX-cropState.lastX;cropState.y+=e.clientY-cropState.lastY;cropState.lastX=e.clientX;cropState.lastY=e.clientY;drawCrop();};
+  window.onmouseup=()=>{cropState.dragging=false;};
+  wrap.ontouchstart=e=>{
+    if(e.touches.length===1){cropState.dragging=true;cropState.lastX=e.touches[0].clientX;cropState.lastY=e.touches[0].clientY;}
+    else if(e.touches.length===2)cropState.lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    e.preventDefault();
+  },{passive:false};
+  wrap.ontouchmove=e=>{
+    if(e.touches.length===1&&cropState.dragging){cropState.x+=e.touches[0].clientX-cropState.lastX;cropState.y+=e.touches[0].clientY-cropState.lastY;cropState.lastX=e.touches[0].clientX;cropState.lastY=e.touches[0].clientY;}
+    else if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);cropState.scale=Math.max(0.1,Math.min(5,cropState.scale*d/cropState.lastDist));cropState.lastDist=d;}
+    drawCrop();e.preventDefault();
+  },{passive:false};
+  wrap.ontouchend=e=>{if(!e.touches.length)cropState.dragging=false;};
+}
+function cancelCrop(){document.getElementById('crop-overlay').style.display='none';}
+function confirmCrop(){
+  const canvas=document.getElementById('cropCanvas');
+  const src=canvas.toDataURL('image/jpeg',0.82);
+  document.getElementById('crop-overlay').style.display='none';
+  // add image layer to editor
+  const img=new Image();
+  img.onload=()=>{
+    const maxW=CW*0.6,maxH=CH*0.6;
+    const s=Math.min(maxW/img.width,maxH/img.height,1);
+    const w=img.width*s,h=img.height*s;
+    const l={type:'image',src,x:CW/2,y:CH/2,w,h,zIndex:currentLayers().length,_img:img};
+    currentLayers().push(l);selectedIdx=currentLayers().length-1;
+    setTool('select');renderEditor();
+  };img.src=src;
+}
+
+// ====== REVIEW ======
+function renderCardToCanvas(card,side,canvas,w,h){
+  if(!canvas)return;
+  canvas.width=w;canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  const dark=document.body.classList.contains('dark');
+  ctx.fillStyle=dark?'#242424':'#ffffff';ctx.fillRect(0,0,w,h);
+  const layers=[...(card.layers[side]||[])].sort((a,b)=>(a.zIndex||0)-(b.zIndex||0));
+  const scaleX=w/CW,scaleY=h/CH;
+  ctx.save();ctx.scale(scaleX,scaleY);
+  const loadAndDraw=()=>{
+    layers.forEach(l=>drawLayer(ctx,l,false));
+    ctx.restore();
+  };
+  const imgLayers=layers.filter(l=>l.type==='image');
+  let pending=imgLayers.length;
+  if(!pending){loadAndDraw();return;}
+  imgLayers.forEach(l=>{
+    if(l._img){pending--;if(!pending)loadAndDraw();return;}
+    const img=new Image();img.onload=()=>{l._img=img;pending--;if(!pending)loadAndDraw();};img.onerror=()=>{pending--;if(!pending)loadAndDraw();};img.src=l.src;
+  });
+}
+
+function startReview(){
+  const due=cur.lesson.cards.filter(isDue);
+  if(!due.length){alert('Aucune carte à réviser pour l\'instant !');return;}
+  rev.queue=[...due].sort(()=>Math.random()-.5);
+  rev.idx=0;rev.ok=0;rev.ko=0;rev.flipped=false;
+  show('s-review');showRevCard();
+}
+
+function showRevCard(){
+  const c=rev.queue[rev.idx];
+  const total=rev.queue.length;
+  const remaining=total-rev.idx;
+  document.getElementById('rev-label').textContent=remaining+' / '+total;
+  document.getElementById('rev-remaining').textContent=remaining+' carte'+(remaining>1?'s':'')+' restante'+(remaining>1?'s':'');
+  document.getElementById('rev-bar').style.width=(rev.idx/total*100)+'%';
+  document.getElementById('flip-hint').style.display='block';
+  document.getElementById('flip-hint').textContent='Appuie pour voir la réponse';
+  document.getElementById('rating-wrap').style.display='none';
+  rev.flipped=false;
+  const canvas=document.getElementById('rev-canvas');
+  renderCardToCanvas(c,'q',canvas,320,220);
+}
+
+function flipCard(){
+  if(rev.flipped)return;rev.flipped=true;
+  document.getElementById('flip-hint').style.display='none';
+  document.getElementById('rating-wrap').style.display='block';
+  const c=rev.queue[rev.idx];
+  const canvas=document.getElementById('rev-canvas');
+  renderCardToCanvas(c,'a',canvas,320,220);
+}
+
+function rate(ok){
+  const c=rev.queue[rev.idx];
+  const orig=cur.lesson.cards.find(x=>x.id===c.id);
+  if(orig){sm2(orig,ok?3:1);orig.reviews=(orig.reviews||0)+1;if(ok)orig.correct=(orig.correct||0)+1;}
+  if(ok)rev.ok++;else rev.ko++;
+  rev.idx++;
+  if(rev.idx>=rev.queue.length){
+    saveDB();
+    const total=rev.ok+rev.ko;
+    const pct=total>0?Math.round(rev.ok/total*100):0;
+    document.getElementById('done-ok').textContent=rev.ok;
+    document.getElementById('done-ko').textContent=rev.ko;
+    document.getElementById('done-pct').textContent=pct+'%';
+    let msg='';
+    if(pct===100)msg='🏆 Parfait ! Tu maîtrises toutes ces cartes.';
+    else if(pct>=75)msg='👍 Très bien ! Encore un peu de travail sur les cartes ratées.';
+    else if(pct>=50)msg='💪 Pas mal ! Continue à réviser régulièrement.';
+    else msg='📖 Continue à travailler, ça viendra !';
+    document.getElementById('done-msg').textContent=msg;
+    show('s-done');
+  }else{rev.flipped=false;showRevCard();}
+}
+
+function endReview(){saveDB();renderLesson();show('s-lesson');}
+
+function sm2(c,r){
+  const q=r===3?5:1;
+  if(q<3){c.reps=0;c.interval=1;}
+  else{c.interval=c.reps===0?1:c.reps===1?6:Math.round(c.interval*c.ef);c.ef=Math.max(1.3,c.ef+0.1-(5-q)*(0.08+(5-q)*0.02));c.reps++;}
+  c.due=Date.now()+c.interval*86400000;
+}
+
+// ====== STATS ======
+function renderStats(){
+  const all=DB.subjects;
+  const totalC=all.reduce((s,sj)=>s+totalCards(sj),0);
+  const totalDue=all.reduce((s,sj)=>s+dueCards(sj),0);
+  let html=`<div class="stat-grid" style="margin-top:10px">
+    <div class="stat-box"><div class="stat-num">${totalC}</div><div class="stat-lbl">Cartes total</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#dc2626">${totalDue}</div><div class="stat-lbl">À réviser</div></div></div>`;
+  all.forEach(sj=>{
+    const cols=sj.color.split(','),t=totalCards(sj),d=dueCards(sj);
+    const revs=sj.lessons.flatMap(l=>l.cards).reduce((s,c)=>s+(c.reviews||0),0);
+    const corr=sj.lessons.flatMap(l=>l.cards).reduce((s,c)=>s+(c.correct||0),0);
+    const pct=revs>0?Math.round(corr/revs*100):0;
+    html+=`<div class="section-title">${sj.emoji||'📚'} ${sj.name}</div>
+    <div style="margin:0 12px;background:var(--bg0);border:0.5px solid var(--brd);border-radius:12px;padding:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+        <span style="font-size:13px;color:var(--fg1)">${t} cartes · ${d} à réviser</span>
+        <span style="font-size:13px;font-weight:600;color:var(--acc)">${pct}%</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${cols[1]}"></div></div>
+    </div>`;
+    if(sj.lessons.length){
+      html+='<div class="list-wrap" style="margin-top:4px">';
+      sj.lessons.forEach(l=>{
+        const m=lessonMastery(l);
+        const lr=l.cards.reduce((s,c)=>s+(c.reviews||0),0);
+        const lc=l.cards.reduce((s,c)=>s+(c.correct||0),0);
+        const lpct=lr>0?Math.round(lc/lr*100):0;
+        html+=`<div class="row-item" style="cursor:default;flex-direction:column;align-items:flex-start;gap:5px">
+          <div style="display:flex;justify-content:space-between;width:100%">
+            <span style="font-size:13px;font-weight:600">${l.name}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--acc)">${lpct}%</span>
+          </div>
+          <div style="font-size:11px;color:var(--fg2)">${l.cards.length} cartes · ${lr} révisions · ${m}% maîtrisé</div>
+          <div class="prog-bar" style="width:100%"><div class="prog-fill" style="width:${lpct}%;background:${cols[1]}"></div></div>
+        </div>`;
+      });
+      html+='</div>';
+    }
+  });
+  document.getElementById('stats-content').innerHTML=html+'<div style="height:16px"></div>';
+}
+
+// ====== INIT ======
+loadDB();
+setTimeout(()=>{setupEditorCanvas();renderEditor();},100);
+</script>
+</body>
+</html>
